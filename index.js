@@ -20,7 +20,8 @@ new serialport.SerialPort("/dev/tty.usbmodem621", {
       cnc.request('status');
     }, 1e3);
   }).on('error', function (e) {
-    console.warn(e.stack);
+    if (e instanceof SyntaxError) console.warn(e.stack);
+    else throw e;
   });
 }).on('error', function (e) {
   throw e;

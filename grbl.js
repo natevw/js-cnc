@@ -24,7 +24,7 @@ function Grbl(port) {
   port.on('data', function (line) {
     if (!line) return;
     else if (line === 'ok') self.emit('ack', null);
-    else if (line.indexOf(ERR) === 0) self.emit('ack', new Error(line.slice(ERR.length) || "[no message provided]"));
+    else if (line.indexOf(ERR) === 0) self.emit('ack', new SyntaxError(line.slice(ERR.length) || "[no message provided]"));
     else if (line.indexOf(VER) === 0) self.emit('ready', line.slice(VER.length).split(' ')[0]);
     else if (line.indexOf(XXX) === 0) self.emit('error', new Error(line.slice(XXX.length)));
     else if (line[0] === '<') self.emit('status', line.slice(1,-1).split(/,|:/));
