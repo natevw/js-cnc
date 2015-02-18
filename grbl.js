@@ -43,11 +43,6 @@ console.log("WRITING", line);
   });
 };
 
-Grbl.prototype.exchange = function (line, cb) {
-  var self = this;
-  self.write(line, cb);
-};
-
 Grbl.prototype.request = function (key) {
   if (key in REQ) this._port.write(REQ[key]);
   else throw Error("Unknown request key: "+key);
