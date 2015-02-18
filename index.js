@@ -10,9 +10,20 @@ new serialport.SerialPort("/dev/tty.usbmodem621", {
   var port = this;
   console.log("opened");
   var cnc = new Grbl(port);
-  setInterval(function () {
-    cnc.requestStatus();
-  }, 1e3);
+  cnc.on('ready', function () {
+    setInterval(function () {
+      cnc.exchange("G91 G1 F1 X1", function (e) {
+        console.log("EXCHANGED", e);
+      });
+    }, 100);
+    setInterval(function () {
+      cnc.request('status');
+    }, 1e3);
+  }).on('error', function (e) {
+    console.warn(e.stack);
+  });
 }).on('error', function (e) {
   throw e;
 });
+
+//require('repl').start({});
