@@ -1,20 +1,22 @@
 var util = require('util'),
-    stream = require('stream'),
-    LineStream = require('linefeed');
+    events = require('events');
 
 function Grbl(port) {
-    stream.Readable.call(this, {});     // TODO: decodeStrings:false?
-    
-    var linefeed = new LineStream({newline:"", objectMode:true});
-    port.pipe(linefeed).on('data', function (line) {
-        console.log("Got a line:", line);
-    });
+  this._port = port;
+  
+  port.on('data', function (line) {
+    if (!line) return;
+    else if (line[0] === 'G') console.log("version:", line);
+    else if (line[0] === '<') console.log("status:", line);
+    else if (line[0] === '[') console.log("report:", line);
+    else if (line[0] === '$') console.log("value:", line);
+    else console.warn("UNKNOWN:", line);
+  });
 };
-util.inherits(Grbl, stream.Writable);
+util.inherits(Grbl, events.EventEmitter);
 
-Grbl.prototype._write = function (d, _, cb) {
-    // TODO: write to port, and "grab a number" waiting for the corresponding 'ok' (may be simple since node will only call _write once per cb)
-};
-
+Grbl.prototype.requestStatus = function () {
+  this._port.write('?');
+}
 
 module.exports = Grbl;

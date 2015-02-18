@@ -22,7 +22,6 @@
   },
   "homepage": "https://github.com/natevw/js-cnc",
   "dependencies": {
-    "linefeed": "file:../../../../../var/folders/h_/3sh02t4d2558cy33c86d833h0000gn/T/npm-11708-62e6dc7e/git-cache-b603f8deac88/6cf0bbbd5d23d7586675525691845a8e4c3a3970",
     "serialport": "^1.5.0"
   }
 }
