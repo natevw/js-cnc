@@ -8,11 +8,61 @@
   </style>
 </head><body>
 
+<div class="readout">
+<h3>Machine</h3>
+<label>X: <input class="x mach" readonly></input></label>
+<label>Y: <input class="y mach" readonly></input></label>
+<label>Z: <input class="z mach" readonly></input></label>
+<h3>Work</h3>
+<label>X: <input class="x work" readonly></input></label>
+<label>Y: <input class="y work" readonly></input></label>
+<label>Z: <input class="z work" readonly></input></label>
+</div>
+
 <div class="jog">
-  <button class="y neg">Y+</button><br>
+  <button class="y pos">Y+</button><br>
   <button class="x neg">X-</button>
   <button class="x pos">X+</button><br>
   <button class="y neg">Y-</button>
 </div>
+
+<script>
+var ws = new WebSocket("ws://localhost:8000");
+ws.onmessage = function (evt) {
+  var d = JSON.parse(evt.data);
+  if (d.status) updateStatus(d.status);
+  else console.log(evt.data);
+};
+ws.onopen = function () {
+  console.log("ready");
+  ws.send("G91 G0");
+};
+
+function updateStatus(arr) {
+  var mIdx = arr.indexOf('MPos');
+  document.querySelector(".readout .x.mach").value = arr[mIdx+1];
+  document.querySelector(".readout .y.mach").value = arr[mIdx+2];
+  document.querySelector(".readout .z.mach").value = arr[mIdx+3];
+  var wIdx = arr.indexOf('WPos');
+  document.querySelector(".readout .x.work").value = arr[wIdx+1];
+  document.querySelector(".readout .y.work").value = arr[wIdx+2];
+  document.querySelector(".readout .z.work").value = arr[wIdx+3];
+}
+
+document.querySelector(".jog .x.neg").addEventListener('click', function () {
+  ws.send("X-1");
+}, false);
+document.querySelector(".jog .x.pos").addEventListener('click', function () {
+  ws.send("X+1");
+}, false);
+document.querySelector(".jog .y.neg").addEventListener('click', function () {
+console.log("y jog -!");
+  ws.send("Y-1");
+}, false);
+document.querySelector(".jog .y.pos").addEventListener('click', function () {
+  ws.send("Y+1");
+}, false);
+
+</script>
 
 </body></html>
