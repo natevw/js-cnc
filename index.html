@@ -35,8 +35,15 @@ ws.onmessage = function (evt) {
 };
 ws.onopen = function () {
   console.log("ready");
-  ws.send("G91 G0");
+  sendJSON({str:"G91 G0"});
+  setInterval(function () {
+    sendJSON({req:'status'});
+  }, 100);
 };
+
+function sendJSON(d) {
+  ws.send(JSON.stringify(d));
+}
 
 function updateStatus(arr) {
   var mIdx = arr.indexOf('MPos');
@@ -50,17 +57,16 @@ function updateStatus(arr) {
 }
 
 document.querySelector(".jog .x.neg").addEventListener('click', function () {
-  ws.send("X-1");
+  sendJSON({str:"X-1"});
 }, false);
 document.querySelector(".jog .x.pos").addEventListener('click', function () {
-  ws.send("X+1");
+  sendJSON({str:"X+1"});
 }, false);
 document.querySelector(".jog .y.neg").addEventListener('click', function () {
-console.log("y jog -!");
-  ws.send("Y-1");
+  sendJSON({str:"Y-1"});
 }, false);
 document.querySelector(".jog .y.pos").addEventListener('click', function () {
-  ws.send("Y+1");
+  sendJSON({str:"Y+1"});
 }, false);
 
 </script>

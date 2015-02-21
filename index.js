@@ -17,9 +17,9 @@ new serialport.SerialPort("/dev/tty.usbmodem621", {
 //        console.log("EXCHANGED", e);
 //      });
 //    }, 5e3);
-    setInterval(function () {
-      cnc.request('status');
-    }, 1e3);
+//    setInterval(function () {
+//      cnc.request('status');
+//    }, 1e3);
   }).on('error', function (e) {
     if (e instanceof SyntaxError) console.warn(e.stack);
     else throw e;
@@ -42,10 +42,13 @@ http.createServer(function (req, res) {
     console.log("ws opened");
     ws.on('message', function (evt) {
       console.log("ws data:", evt.data);
-      cnc.write(evt.data, function (e) {
+      var d = JSON.parse(evt.data);
+      if (d.str) cnc.write(d.str, function (e) {
         if (e) sendJSON({error:e.message});
         else sendJSON({ok:true});
       });
+      else if (d.req) cnc.request(d.req);
+      else console.warn("Unhandled message type.");
     });
     cnc.on('status', function (arr) {
       sendJSON({status:arr});
