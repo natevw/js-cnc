@@ -7,6 +7,21 @@
     .jog .y { position: relative; left: 15px; }
     .jog .z { position: relative; left: 20px; }
     .jog button { width: 35px; }
+    .proto {
+      display: block; position: relative;
+      width: 100px; height: 100px;
+      background: grey;
+      margin: 2em;
+      cursor: crosshair;
+    }
+    .proto span {
+      display: block; position: absolute;
+      left: 0; right: 0; width: 5px;
+      top: 0; bottom: 0; height: 5px;
+      margin: auto;
+      background: black;
+      border-radius: 2.5px;
+    }
   </style>
 </head><body>
 
@@ -30,6 +45,8 @@
   <button class="z neg">Z-</button>
 </div>
 
+<div class="proto"><span></span></div>
+
 <script>
 var ws = new WebSocket("ws://localhost:8000");
 ws.onmessage = function (evt) {
@@ -39,7 +56,6 @@ ws.onmessage = function (evt) {
 };
 ws.onopen = function () {
   console.log("ready");
-  sendJSON({str:"G91 G0"});
   setInterval(function () {
     sendJSON({req:'status'});
   }, 100);
@@ -47,6 +63,11 @@ ws.onopen = function () {
 
 function sendJSON(d) {
   ws.send(JSON.stringify(d));
+}
+
+function moveRel(axes) {
+  console.log(axes);
+  sendJSON({str:"G91 G0 "+axes});
 }
 
 function updateStatus(arr) {
@@ -61,23 +82,66 @@ function updateStatus(arr) {
 }
 
 document.querySelector(".jog .x.neg").addEventListener('click', function () {
-  sendJSON({str:"X-1"});
+  moveRel("X-1");
 }, false);
 document.querySelector(".jog .x.pos").addEventListener('click', function () {
-  sendJSON({str:"X+1"});
+  moveRel("X+1");
 }, false);
 document.querySelector(".jog .y.neg").addEventListener('click', function () {
-  sendJSON({str:"Y-1"});
+  moveRel("Y-1");
 }, false);
 document.querySelector(".jog .y.pos").addEventListener('click', function () {
-  sendJSON({str:"Y+1"});
+  moveRel("Y+1");
 }, false);
 document.querySelector(".jog .z.neg").addEventListener('click', function () {
-  sendJSON({str:"Z-1"});
+  moveRel("Z-1");
 }, false);
 document.querySelector(".jog .z.pos").addEventListener('click', function () {
-  sendJSON({str:"Z+1"});
+  moveRel("Z+1");
 }, false);
+
+
+var pad = document.querySelector(".proto");
+pad.addEventListener('mousedown', function () {
+    var box = pad.getBoundingClientRect();
+    console.log("DOWN");
+    window.addEventListener('mousemove', move, false);
+    window.addEventListener('mouseup', done, false);
+    function move(evt) {
+      var _x = (evt.clientX - box.left) / box.width,
+          x = Math.max(-1, Math.min((_x - 0.5) * 2, 1)),
+          _y = (evt.clientY - box.top) / box.height,
+          y = Math.max(-1, Math.min((0.5 - _y) * 2, 1));
+      console.log("move", x, y);
+      setJog(x,y,0);
+    }
+    function done(evt) {
+      console.log("DONE")
+      setJog(0,0,0);
+      window.removeEventListener('mousemove', move, false);
+      window.removeEventListener('mouseup', done, false);
+    }
+}, false);
+
+var jogger,
+    jx = 0, jy = 0, jz = 0,
+    F = 500 / 60e3, T = 10;
+function setJog(x,y,z) {
+  if (typeof x == 'number') jx = x;
+  if (typeof y == 'number') jy = y;
+  if (typeof z == 'number') jz = z;
+  if (!x && !y && !z) { clearInterval(jogger); jogger = null; }
+  else if (!jogger) jogger = setInterval(function () {
+    var scale = F * T;
+    moveRel([
+      "X" + (jx*scale).toFixed(4),
+      "Y" + (jy*scale).toFixed(4),
+      "Z" + (jz*scale).toFixed(4),
+    ].join(' '));
+  }, T);
+}    
+
+
 
 </script>
 
