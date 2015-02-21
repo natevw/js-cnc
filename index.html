@@ -3,8 +3,10 @@
   <meta charset="utf-8">
   <title>CNC Controller</title>
   <style>
-    .jog { display: inline-block; border: 1px solid black; padding: 10px; }
+    .jog { display: inline-block; border: 1px solid black; padding: 10px; padding-right: 30px; }
     .jog .y { position: relative; left: 15px; }
+    .jog .z { position: relative; left: 20px; }
+    .jog button { width: 35px; }
   </style>
 </head><body>
 
@@ -20,10 +22,12 @@
 </div>
 
 <div class="jog">
-  <button class="y pos">Y+</button><br>
+  <button class="y pos">Y+</button>
+  <button class="z pos">Z+</button><br>
   <button class="x neg">X-</button>
   <button class="x pos">X+</button><br>
   <button class="y neg">Y-</button>
+  <button class="z neg">Z-</button>
 </div>
 
 <script>
@@ -67,6 +71,12 @@ document.querySelector(".jog .y.neg").addEventListener('click', function () {
 }, false);
 document.querySelector(".jog .y.pos").addEventListener('click', function () {
   sendJSON({str:"Y+1"});
+}, false);
+document.querySelector(".jog .z.neg").addEventListener('click', function () {
+  sendJSON({str:"Z-1"});
+}, false);
+document.querySelector(".jog .z.pos").addEventListener('click', function () {
+  sendJSON({str:"Z+1"});
 }, false);
 
 </script>
