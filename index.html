@@ -112,6 +112,8 @@ pad.addEventListener('mousedown', function () {
           _y = (evt.clientY - box.top) / box.height,
           y = Math.max(-1, Math.min((0.5 - _y) * 2, 1));
       console.log("move", x, y);
+      if (Math.abs(x) < 0.05) x = 0;
+      if (Math.abs(y) < 0.05) y = 0;
       setJog(x,y,0);
     }
     function done(evt) {
