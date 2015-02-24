@@ -41,7 +41,7 @@ http.createServer(function (req, res) {
     }
     console.log("ws opened");
     ws.on('message', function (evt) {
-      console.log("ws data:", evt.data);
+      //console.log("ws data:", evt.data);
       var d = JSON.parse(evt.data);
       if (d.str) cnc.write(d.str, function (e) {
         if (e) sendJSON({error:e.message});

@@ -18,10 +18,11 @@ function Grbl(port) {
   
   var self = this;
   if (1) self.emit = function (k) {
-    console.log("EMIT:", k, Array.prototype.slice.call(arguments, 1).join(', '));
+//    if (k !== 'status') console.log("EMIT:", k, Array.prototype.slice.call(arguments, 1).join(', '));
     Grbl.super_.prototype.emit.apply(this, arguments);
   }
   port.on('data', function (line) {
+if (line[0] !== '<') console.log("RESPONSE:", line);
     if (!line) return;
     else if (line === 'ok') self.emit('ack', null);
     else if (line.indexOf(ERR) === 0) self.emit('ack', new SyntaxError(line.slice(ERR.length) || "[no message provided]"));
@@ -37,7 +38,7 @@ util.inherits(Grbl, stream.Writable);
 
 Grbl.prototype._write = function (line, _, cb) {
   var self = this;
-console.log("WRITING", line);
+console.log("WRITING:", line);
   self._port.write(line+'\n', function () {
     self.once('ack', cb);
   });
