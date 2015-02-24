@@ -3,6 +3,7 @@
   <meta charset="utf-8">
   <title>CNC Controller</title>
   <style>
+    .status-wrapper { font-size: 0.75em; font-weight: normal; }
     .jog { display: inline-block; border: 1px solid black; padding: 10px; padding-right: 30px; }
     .jog .y { position: relative; left: 15px; }
     .jog .z { position: relative; left: 20px; }
@@ -22,11 +23,14 @@
       background: black;
       border-radius: 2.5px;
     }
+    .spindle.pwr {
+      margin-top: 2em;
+    }
   </style>
 </head><body>
 
 <div class="readout">
-<h3>Machine</h3>
+<h3>Machine <span class="status-wrapper">(<span class="status">not connected</span>)</span></h3>
 <label>X: <input class="x mach" readonly></input></label>
 <label>Y: <input class="y mach" readonly></input></label>
 <label>Z: <input class="z mach" readonly></input></label>
@@ -47,6 +51,9 @@
 
 <div class="proto"><span></span></div>
 
+<button class="home">Home</button><button class="unlock">Unlock</button><br>
+<label><input type="checkbox" class="spindle pwr"></input> Spindle</label>
+
 <script>
 var ws = new WebSocket("ws://localhost:8000");
 ws.onmessage = function (evt) {
@@ -56,9 +63,13 @@ ws.onmessage = function (evt) {
 };
 ws.onopen = function () {
   console.log("ready");
-  setInterval(function () {
+  var poll = setInterval(function () {
     sendJSON({req:'status'});
   }, 100);
+  ws.onclose = function () {
+    console.warn("socket closed!");
+    clearInterval(poll);
+  };
 };
 
 function sendJSON(d) {
@@ -70,6 +81,7 @@ function moveRel(axes) {
 }
 
 function updateStatus(arr) {
+  document.querySelector(".status").textContent = arr[0];
   var mIdx = arr.indexOf('MPos');
   document.querySelector(".readout .x.mach").value = arr[mIdx+1];
   document.querySelector(".readout .y.mach").value = arr[mIdx+2];
@@ -114,7 +126,7 @@ pad.addEventListener('mousedown', function () {
       console.log("move", x, y);
       if (Math.abs(x) < 0.05) x = 0;
       if (Math.abs(y) < 0.05) y = 0;
-      var B = 5;
+      var B = 3;
       x = (x < 0) ? -Math.pow(-x, B) : Math.pow(x, B);
       y = (y < 0) ? -Math.pow(-y, B) : Math.pow(y, B);
       setJog(x,y,0);
@@ -129,7 +141,7 @@ pad.addEventListener('mousedown', function () {
 
 var jogger,
     jx = 0, jy = 0, jz = 0,
-    F = 500 / 60e3, T = 100;
+    F = 2000 / 60e3, T = 10;
 function setJog(x,y,z) {
   if (typeof x == 'number') jx = x;
   if (typeof y == 'number') jy = y;
@@ -145,7 +157,18 @@ function setJog(x,y,z) {
   }, T);
 }    
 
+document.querySelector(".home").addEventListener('click', function () {
+  sendJSON({str:"$H"});
+});
+document.querySelector(".unlock").addEventListener('click', function () {
+  sendJSON({str:"$X"});
+});
 
+document.querySelector(".spindle.pwr").addEventListener('change', function (evt) {
+  var pwr = evt.currentTarget.checked;
+  if (pwr) sendJSON({str:"M3"});
+  else sendJSON({str:"M5"});
+});
 
 </script>
 
