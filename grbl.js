@@ -38,7 +38,7 @@ util.inherits(Grbl, stream.Writable);
 Grbl.prototype._write = function (line, _, cb) {
   var self = this;
 console.log("WRITING", line);
-  self._port.write(line+'\r\n', function () {
+  self._port.write(line+'\n', function () {
     self.once('ack', cb);
   });
 };
