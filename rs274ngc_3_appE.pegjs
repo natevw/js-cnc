@@ -2,24 +2,24 @@ start
   = line
 
 line
-  = block_delete:"/"? num:line_number? seg:segment*
+  = block_delete:"/"? n:line_number? segs:segment* { return {del:Boolean(block_delete), n:n, segs:segs}; }
 
 line_number
-  = "N"i digit+
+  = "N"i n:$digit+ { return +n; }
 
 segment
   = mid_line_word / comment / parameter_setting
 
 mid_line_word
-  = mid_line_letter real_value
+  = w:mid_line_letter v:real_value { return {word:w,value:v}; }
 
 real_value
   = real_number / expression / parameter_value / unary_combo
 real_number
-  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+))
+  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+)) { return +text(); }
 
 expression
-  = "[" real_value (binary_operation real_value)* "]"
+  = "[" real_value (binary_operation real_value)* "]" { return {expr:text()}; }     // TODO: proper lazy evaluation
 
 binary_operation
   = binary_operation1 / binary_operation2 / binary_operation3
