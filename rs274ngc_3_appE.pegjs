@@ -20,7 +20,7 @@ start
   = line
 
 line
-  = block_delete:"/"? n:line_number? segs:segment* { return {del:Boolean(block_delete), n:n, segs:segs}; }
+  = block_delete:"/"? n:line_number? segs:segment* { return {lineNumber:n, commands:segs, blockDeletes:Boolean(block_delete)}; }
 
 line_number
   = "n" n:$digit+ { return +n; }
@@ -29,7 +29,7 @@ segment
   = mid_line_word / comment / parameter_setting
 
 mid_line_word
-  = w:mid_line_letter v:real_value { return {word:w,value:v()}; }
+  = w:mid_line_letter v:real_value { return {word:w,getValue:v}; }
 
 real_value
   = real_number / expression / parameter_value / unary_combo
@@ -74,11 +74,11 @@ non_exclusive_or = or
 exclusive_or = xor
 
 parameter_value
-  = "#" parameter_index
+  = "#" idx:parameter_index { return function param() { return options.getValueForParam(idx()); } }
 parameter_index
   = real_value
 parameter_setting
-  = "#" parameter_index "=" real_value
+  = "#" idx:parameter_index "=" val:real_value { return {setting:true, getParam:function () { return idx(); }, getValue:function () { return val(); } } }
 
 unary_combo
   = ordinary_unary_combo / arc_tangent_combo
@@ -106,9 +106,9 @@ arc_tangent     = "atan"  { return function atand2(y,x) { return rad2deg * Math.
 comment
   = message / ordinary_comment
 message
-  = "(" white_space* "M"i white_space* "S"i white_space* "G"i white_space* "," comment_character* ")"
+  = "(" white_space* "M"i white_space* "S"i white_space* "G"i white_space* "," msg:comment_character* ")" { return {message:true, content:msg.join('')} }
 ordinary_comment
-  = "(" comment_character* ")"
+  = "(" cmt:comment_character* ")" { return {comment:true, content:cmt.join('')} }
 
 digit = [0-9]
 mid_line_letter = [abcdfghijklmpqrstxyz]
