@@ -1,3 +1,21 @@
+{
+  function operate(first, rest) {
+    if (!rest.length) return first;
+    
+    var lhs = first,
+        next = rest.shift(),
+        op = next[0],
+        rhs = operate(next[1], rest);
+    return {l:lhs, o:op, r:rhs};
+    /*
+    return function () {
+      op(lhs(), rhs());
+    };
+    */
+  }
+}
+
+
 start
   = line
 
@@ -11,16 +29,28 @@ segment
   = mid_line_word / comment / parameter_setting
 
 mid_line_word
-  = w:mid_line_letter v:real_value { return {word:w,value:v}; }
+  = w:mid_line_letter v:real_value { return {word:w,value:(v instanceof Function) ? v() : v}; }
 
 real_value
   = real_number / expression / parameter_value / unary_combo
 real_number
-  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+)) { return +text(); }
+  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+)) { var n = +text(); return n; /*function () { return n; }*/ }
 
 expression
-  = "[" real_value (binary_operation real_value)* "]" { return {expr:text()}; }     // TODO: proper lazy evaluation
+  = expression_recursively
 
+// HT: https://github.com/ryansturmer/node-gcode/blob/b206530251a7a03af3feb0854ba469a06057eaf3/parser.pegjs#L47
+expression_recursively
+  = "[" expr:expr_op3 "]" { return {expr:expr}; }
+expr_op3
+  = first:expr_op2 rest:(binary_operation3 expr_op2)* { return operate(first, rest); }
+expr_op2
+  = first:expr_op1 rest:(binary_operation2 expr_op1)* { return operate(first, rest); }
+expr_op1
+  = first:real_value rest:(binary_operation1 real_value)* { return operate(first, rest); }
+
+expression_text
+  = "[" real_value (binary_operation real_value)* "]" { return {expr:text()}; }
 binary_operation
   = binary_operation1 / binary_operation2 / binary_operation3
 binary_operation1
@@ -29,6 +59,8 @@ binary_operation2
   = "/" / "mod" / "*"
 binary_operation3
   = "and" / "xor" / "-" / "or" / "+"
+
+
 
 parameter_value
   = "#" parameter_index
