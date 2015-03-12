@@ -1,4 +1,6 @@
 {
+  var deg2rad = Math.PI / 180,
+      rad2deg = 180 / Math.PI;
   function operate(first, rest) {
     if (!rest.length) return first;
     
@@ -81,26 +83,25 @@ parameter_setting
 unary_combo
   = ordinary_unary_combo / arc_tangent_combo
 ordinary_unary_combo
-  = ordinary_unary_operation expression
+  = op:ordinary_unary_operation x:expression { return function () { return op(x()); } }
 ordinary_unary_operation
   = absolute_value / arc_cosine / arc_sine / cosine / e_raised_to / fix_down / fix_up / natural_log_of / round / sine / square_root / tangent
 arc_tangent_combo
   = atan2:arc_tangent y:expression "/" x:expression { return function () { return atan2(y(), x()); } }
 
-// TODO: degree↔︎radian conversions for all trig!
 absolute_value  = "abs"   { return Math.abs; }
-arc_cosine      = "acos"  { return Math.acos; }
-arc_sine        = "asin"  { return Math.asin; }
-cosine          = "cos"   { return Math.cos; }
+arc_cosine      = "acos"  { return function acosd(x) { return rad2deg * Math.acos(x); } }
+arc_sine        = "asin"  { return function asind(x) { return rad2deg * Math.asin(x); } }
+cosine          = "cos"   { return function cosd(x) { return Math.cos(x * deg2rad); } }
 e_raised_to     = "exp"   { return Math.exp; }
 fix_down        = "fix"   { return Math.floor; }
 fix_up          = "fup"   { return Math.ceil; }
 natural_log_of  = "ln"    { return Math.ln; }
 round           = "round" { return Math.round; }
-sine            = "sin"   { return Math.sin; }
+sine            = "sin"   { return function sind(x) { return Math.sin(x * deg2rad); } }
 square_root     = "sqrt"  { return Math.sqrt; }
-tangent         = "tan"   { return Math.tan; }
-arc_tangent     = "atan"  { return Math.atan2; }
+tangent         = "tan"   { return function tand(x) { return Math.tan(x * deg2rad); } }
+arc_tangent     = "atan"  { return function atand2(y,x) { return rad2deg * Math.atan2(y,x); } }
 
 comment
   = message / ordinary_comment
