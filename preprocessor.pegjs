@@ -7,4 +7,4 @@ comment
   = "(" [^()]* ")"
 
 other
-  = [^(]+ { return text().replace(/[ \t]/g, ''); }
+  = [^(]+ { return text().replace(/[ \t]/g, '').toLowerCase(); }

@@ -23,7 +23,7 @@ line
   = block_delete:"/"? n:line_number? segs:segment* { return {del:Boolean(block_delete), n:n, segs:segs}; }
 
 line_number
-  = "N"i n:$digit+ { return +n; }
+  = "n" n:$digit+ { return +n; }
 
 segment
   = mid_line_word / comment / parameter_setting
@@ -111,6 +111,6 @@ ordinary_comment
   = "(" comment_character* ")"
 
 digit = [0-9]
-mid_line_letter = [ABCDFGHIJKLMPQRSTXYZ]i
+mid_line_letter = [abcdfghijklmpqrstxyz]
 white_space = [ \t]
 comment_character = [^()]     // TODO: "any printable character plus space and tab, except for [parentheses]"
