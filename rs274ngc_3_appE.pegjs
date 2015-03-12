@@ -29,12 +29,12 @@ segment
   = mid_line_word / comment / parameter_setting
 
 mid_line_word
-  = w:mid_line_letter v:real_value { return {word:w,value:(v instanceof Function) ? v() : v}; }
+  = w:mid_line_letter v:real_value { return {word:w,value:v()}; }
 
 real_value
   = real_number / expression / parameter_value / unary_combo
 real_number
-  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+)) { var n = +text(); return function () { return n; } }
+  = ("+" / "-")? ((digit+ "."? digit*) / ("." digit+)) { var n = +text(); return function literal() { return n; } }
 
 expression
   = expression_recursively
@@ -83,11 +83,11 @@ parameter_setting
 unary_combo
   = ordinary_unary_combo / arc_tangent_combo
 ordinary_unary_combo
-  = op:ordinary_unary_operation x:expression { return function () { return op(x()); } }
+  = op:ordinary_unary_operation x:expression { return function unary() { return op(x()); } }
 ordinary_unary_operation
   = absolute_value / arc_cosine / arc_sine / cosine / e_raised_to / fix_down / fix_up / natural_log_of / round / sine / square_root / tangent
 arc_tangent_combo
-  = atan2:arc_tangent y:expression "/" x:expression { return function () { return atan2(y(), x()); } }
+  = atan2:arc_tangent y:expression "/" x:expression { return function atan() { return atan2(y(), x()); } }
 
 absolute_value  = "abs"   { return Math.abs; }
 arc_cosine      = "acos"  { return function acosd(x) { return rad2deg * Math.acos(x); } }
