@@ -180,6 +180,7 @@ document.querySelector(".spindle.pwr").addEventListener('change', function (evt)
 });
 
 var ordering = [
+  [],
   ['g93', 'g94'],
   ['f'],
   ['s'],
@@ -222,14 +223,21 @@ Array.prototype.slice.call(forms).forEach(function (form) {
       });
       window.dbgBlock = block;
       
-      var line = block.commands.filter(function (cmd) {
+      var line = block.commands.map(function (cmd) {
+        if (cmd.word) {
+          cmd.rendered = cmd.word + cmd.getValue();
+          cmd._sort = (cmd.word in ordering) ?
+              ordering[cmd.word] :
+              (ordering[cmd.rendered] || 100+cmd.word.charCodeAt(0));
+        }
+        return cmd;
+      }).filter(function (cmd) {
         if (cmd.setting) params[cmd.getParam()] = cmd.getValue();
         else if (cmd.word) return true;
       }).sort(function (a,b) {
-        // TODO: follow 3.8 (execution order), 3.3.3 (parameter setting), 3.3.6 (modal groups, etc.)
-        return 0;
+        return a._sort - b._sort;
       }).map(function (cmd) {
-        return cmd.word.toUpperCase() + cmd.getValue();
+        return cmd.rendered.toUpperCase();
       }).join(' ');
       if (line) console.log(line)
     } else {
