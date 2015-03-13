@@ -27,6 +27,11 @@
       margin-top: 2em;
     }
   </style>
+  <script>var module = {};</script>
+  <script src="parsing/preprocessor.js"></script>
+  <script>var preproc = module.exports;</script>
+  <script src="parsing/rs274ngc_3_appE.js"></script>
+  <script>var gcode = module.exports;</script>
 </head><body>
 
 <div class="readout">
@@ -53,6 +58,10 @@
 
 <button class="home">Home</button><button class="unlock">Unlock</button><br>
 <label><input type="checkbox" class="spindle pwr"></input> Spindle</label>
+
+<form><label>Cmd: <input name="cmd" width="256"></input></label><button>send</button></form>
+<form><label>Raw: <input name="raw" width="256"></input></label><button>send</button></form>
+
 
 <script>
 var ws = new WebSocket("ws://localhost:8000");
@@ -170,6 +179,65 @@ document.querySelector(".spindle.pwr").addEventListener('change', function (evt)
   else sendJSON({str:"M5"});
 });
 
+var ordering = [
+  ['g93', 'g94'],
+  ['f'],
+  ['s'],
+  ['t'],
+  ['m6'],
+  ['m3', 'm4', 'm5'],
+  ['m7', 'm8', 'm9'],
+  ['m48', 'm49'],
+  ['g4'],
+  ['g17', 'g18', 'g19'],
+  ['g20', 'g21'],
+  ['g40', 'g41', 'g42'],
+  ['g43', 'g49'],
+  ['g54', 'g55', 'g56', 'g57', 'g58', 'g59', 'g59.1', 'g59.2', 'g59.3'],
+  ['g90', 'g91'],
+  ['g98', 'g99'],
+  ['g28', 'g30'],
+  ['g10', 'g92', 'g92.1', 'g92.2', 'g94'],
+  ['g53'],      // NOTE: this order is implied, but not actually put here, by spec.
+  ['g0','g1','g2','g3', 'g80','g81','g82','g83','g84','g85','g86','g87','g88','g89'],
+  ['m0', 'm1', 'm30', 'm60']
+].reduce(function (obj, arr, i) {
+  arr.forEach(function (w) {
+    obj[w] = i;
+  });
+  return obj;
+}, Object.create(null));
+
+
+var params = {},
+    forms = document.querySelectorAll("form");
+Array.prototype.slice.call(forms).forEach(function (form) {
+  form.addEventListener('submit', function (evt) {
+    evt.preventDefault();
+    var field = form.querySelector('input');
+    
+    if (field.name === 'cmd') {
+      var block = gcode.parse(preproc.parse(field.value), {
+        getValueForParam: function (idx) { return params[idx]; }
+      });
+      window.dbgBlock = block;
+      
+      var line = block.commands.filter(function (cmd) {
+        if (cmd.setting) params[cmd.getParam()] = cmd.getValue();
+        else if (cmd.word) return true;
+      }).sort(function (a,b) {
+        // TODO: follow 3.8 (execution order), 3.3.3 (parameter setting), 3.3.6 (modal groups, etc.)
+        return 0;
+      }).map(function (cmd) {
+        return cmd.word.toUpperCase() + cmd.getValue();
+      }).join(' ');
+      if (line) console.log(line)
+    } else {
+      sendJSON({str:field.value});
+    }
+    field.value = null;
+  }, false);
+});
 </script>
 
 </body></html>
