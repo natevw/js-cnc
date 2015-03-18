@@ -26,6 +26,13 @@
     .spindle.pwr {
       margin-top: 2em;
     }
+    .file {
+      margin: 2em;
+    }
+    .file textarea {
+      width: 100%;
+      height: 20em;
+    }
   </style>
   <script>var module = {};</script>
   <script src="parsing/preprocessor.js"></script>
@@ -62,6 +69,14 @@
 <form><label>Cmd: <input name="cmd" width="256"></input></label><button>send</button></form>
 <form><label>Raw: <input name="raw" width="256"></input></label><button>send</button></form>
 
+<div class="file">
+<textarea></textarea><br>
+<label>Open G-code: <input type="file"></input></label>
+</div>
+
+<svg width="1000" height="1000"  viewPort="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <polyline fill="none" stroke="black" stroke-width="0.01" points="20,100 40,60 70,80 100,20"/>
+</svg>
 
 <script>
 var ws = new WebSocket("ws://localhost:8000");
@@ -179,6 +194,7 @@ document.querySelector(".spindle.pwr").addEventListener('change', function (evt)
   else sendJSON({str:"M5"});
 });
 
+
 var ordering = [
   [],
   ['g93', 'g94'],
@@ -209,6 +225,225 @@ var ordering = [
   return obj;
 }, Object.create(null));
 
+var modalGroups = {
+  motion: ['g0', 'g1', 'g2', 'g3', 'g38.2', 'g80', 'g81', 'g82', 'g83', 'g84', 'g85', 'g86', 'g87', 'g88', 'g89'],
+  planeSelection: ['g17', 'g18', 'g19'],
+  distanceMode: ['g90', 'g91'],
+  feedRateMode: ['g93', 'g94'],
+  units: ['g20', 'g21'],
+  cutterRadiusCompensation: ['g40', 'g41', 'g42'],
+  toolLengthOffset: ['g43', 'g49'],
+  returnMode: ['g98', 'g99'],
+  coordinateSystem: ['g54', 'g55', 'g56', 'g57', 'g58', 'g59', 'g59.1', 'g59.2', 'g59.3'],
+  pathControlMode: ['g61', 'g61.1', 'g64'],
+  stopping: ['m0', 'm1', 'm2', 'm30', 'm60'],
+  toolChange: ['m6'],
+  spindleTurning: ['m3', 'm4', 'm5'],
+  coolant: ['m7', 'm8', 'm9'],
+  overrides: ['m48', 'm49'],
+  nonModal: ['g4', 'g10', 'g28', 'g30', 'g53', 'g92', 'g92.1', 'g92.2', 'g92.3']
+}, modalCommands = Object.keys(modalGroups).reduce(function (obj, key) {
+  modalGroups[key].forEach(function (cmd) {
+    obj[cmd] = key;
+  });
+  return obj;
+}, Object.create(null));
+
+var axisNonModals = {'g10':true, 'g28':true, 'g30':true, 'g92':true},
+    axisWords = {'x':true, 'y':true, 'z':true, 'a':true, 'b':true, 'c':true};
+
+var letterStates = {
+  f: 'feedRate',
+  s: 'spindleSpeed',
+  t: 'toolSelection'
+};
+
+var cannedMotionNames = {
+  'g81': "drilling",
+  'g82': "drilling with dwell",
+  'g83': "peck drilling",
+  'g84': "right hand tapping",
+  'g85': "boring, no dwell, feed out",
+  'g86': "boring, spindle stop, rapid out",
+  'g87': "back boring",
+  'g88': "boring, spindle stop, manual out",
+  'g89': "boring, dwell, feed out"
+};
+
+function initialState() {
+  return {
+    points: [],
+    traverseRate: 1000,
+    x: 0, y: 0, z: 0, t: 0,
+    
+    motion: 'g0',
+    planeSelection: 'g17',
+    distanceMode: 'g90',
+    feedRateMode: 'g94',
+    units: 'g21',
+    coordinateSystem: 'g54',
+    stopping: 'm0',
+    spindleTurning: 'm5',
+    coolant: 'm9',
+    toolSelection: 0,
+    feedRate: 0
+  }
+}
+
+function renderedCommands(line, params) {
+  var block = gcode.parse(preproc.parse(line), {
+    getValueForParam: function (idx) { return params[idx]; }
+  });
+  return block.commands.map(function (cmd) {
+    if (cmd.word) {
+      cmd.value = cmd.getValue();
+      cmd.rendered = cmd.word + cmd.value;
+      cmd._sort = (cmd.word in ordering) ?
+          ordering[cmd.word] :
+          (ordering[cmd.rendered] || 100+cmd.word.charCodeAt(0));
+    }
+    return cmd;
+  }).filter(function (cmd) {
+    if (cmd.setting) params[cmd.getParam()] = cmd.getValue();
+    else if (cmd.word) return true;
+  }).sort(function (a,b) {
+    return a._sort - b._sort;
+  });
+}
+
+
+function distanceDelta(state, axes) {
+  var delta = {
+    x: (axes.x || 0),
+    y: (axes.y || 0),
+    z: (axes.z || 0)
+  };
+  // TODO: g53 is not simply absolute distance, but machine coordinates as well…
+  if (state.distanceMode === 'g90' || state.nonModal === 'g53') {   // abs
+    if ('x' in axes) delta.x -= state.x;
+    if ('y' in axes) delta.y -= state.y;
+    if ('z' in axes) delta.z -= state.z;
+  } else if (state.distanceMode !== 'g91') {  // rel
+    throw Error("Unknown distance mode!");
+  }
+  return delta;
+}
+
+function lineTo(state, axes) {
+  var d = distanceDelta(state, axes),
+      rate = (state.motion === 'g0') ? state.traverseRate : state.feedRate,
+      dist = (state.feedRateMode === 'g93' && state.motion !== 'g0') ?
+        60 : Math.sqrt(d.x*d.x + d.y*d.y + d.z*d.z);
+  if (!rate) throw Error("Feed rate must be non-zero!");
+  state.points.push({
+    x: state.x += d.x,
+    y: state.y += d.y,
+    z: state.z += d.z,
+    t: state.t += dist / rate
+  });
+}
+
+function cannedCycle(state) {
+  // TODO: actual motions when practical
+  if (state.motion in cannedMotionNames) {
+    throw Error("Unimplemented canned cycle: "+cannedMotionNames[state.motion]);
+  } else {
+    throw Error("Unknown motion!");
+  }
+}
+
+function groupCommands(cmds) {
+  var groups = {};
+  cmds.forEach(function (cmd) {
+    var group = modalCommands[cmd.rendered];
+    // TODO: m7+m8 (group === 'coolant') special case [note that Grbl 0.9 only supports m8 anyway though…]
+    if (group in groups) throw Error("Modal group violation ("+group+")!");
+    else if (group) groups[group] = cmd.rendered;
+    else groups[cmd.word] = cmd.value;      // "For all other legal letters, a line may have only one word…."
+  });
+  if (groups.nonModal in axisNonModals && groups.motion) throw Error("Axis words violation!");
+  return groups;
+}
+
+function performMotion(state, axes, other) {
+  switch (state.motion) {
+    case 'g0':
+    case 'g1':
+      lineTo(state, distanceDelta(state, axes));
+      break;
+    case 'g2':
+    case 'g3':
+        // TODO: implement…
+        throw Error("Arcs not implemented!");
+    case 'g38.2':
+      state.points.push({x:state.x, y:state.y, z:state.z, t:"straight probe"});
+      break;
+    case 'g80':
+      throw Error("Cancel motion mode was triggered!");
+    default:      // assume canned cycle should handle
+      return cannedCycle(state, axes, other);
+  }
+}
+
+function performNonModal(state, axes, other) {
+  switch (state.nonModal) {
+    case 'g4':  // dwell
+      if (other.p == null) throw Error("Parameter required.");
+      if (other.p < 0) throw Error("Parameter must not be negative.");
+      state.points.push({
+        x: state.x,
+        y: state.y,
+        z: state.z,
+        t: state.t += other.p
+      });
+      break;
+    case 'g10':
+      // TODO: coordinate system origin setting
+      break;
+    case 'g28':
+      // TODO: return to home
+      break;
+    case 'g30':
+      // TODO: return to second home
+      break;
+    case 'g53':     // motion in machine coordinate system
+      if (state.motion !== 'g0' || state.motion !== 'g1') throw Error("Must be in a linear motion mode.");
+      if (state.cutterRadiusCompensation !== 'g40') throw Error("Cutter radius compensation must be off.");
+      // (actual motion happens via g0/g1 in `lineTo` logic)
+      break;
+    case 'g92':
+    case 'g92.1':
+    case 'g92.2':
+    case 'g92.3':
+      break;
+    default:
+      throw Error("Unknown non-modal command!");
+  }
+}
+
+function advanceMachineState(commands, state) {
+  // TODO: handle `state.stopping`!
+  // TODO: `state.toolChange` (and various other commands?)
+  var axes = {},
+      other = {},
+      // NOTE: might assume keys of `groups` retain order of `commands`
+      groups = groupCommands(commands);
+  Object.keys(groups).forEach(function (key) {
+    var val = groups[key];
+    if (key in modalGroups) state[key] = val;
+    else if (key in letterStates) state[letterStates[key]] = val;
+    else if (key in axisWords) axes[key] = val;
+    else other[key] = val;
+  });
+  if (state.nonModal) {
+    performNonModal(state, axes, other);
+    if (state.nonModal in axisNonModals) axes = {};
+  }
+  if (Object.keys(axes).length) performMotion(state, axes, other);
+  else if ('motion' in groups) throw Error("Need at least one axis for motion.");
+  delete state.nonModal;
+};
+
 
 var params = {},
     forms = document.querySelectorAll("form");
@@ -216,36 +451,47 @@ Array.prototype.slice.call(forms).forEach(function (form) {
   form.addEventListener('submit', function (evt) {
     evt.preventDefault();
     var field = form.querySelector('input');
-    
     if (field.name === 'cmd') {
-      var block = gcode.parse(preproc.parse(field.value), {
-        getValueForParam: function (idx) { return params[idx]; }
-      });
-      window.dbgBlock = block;
-      
-      var line = block.commands.map(function (cmd) {
-        if (cmd.word) {
-          cmd.rendered = cmd.word + cmd.getValue();
-          cmd._sort = (cmd.word in ordering) ?
-              ordering[cmd.word] :
-              (ordering[cmd.rendered] || 100+cmd.word.charCodeAt(0));
-        }
-        return cmd;
-      }).filter(function (cmd) {
-        if (cmd.setting) params[cmd.getParam()] = cmd.getValue();
-        else if (cmd.word) return true;
-      }).sort(function (a,b) {
-        return a._sort - b._sort;
-      }).map(function (cmd) {
-        return cmd.rendered.toUpperCase();
-      }).join(' ');
-      if (line) console.log(line)
+        var line = renderedCommands(field.value, params).map(function (cmd) {
+          return cmd.rendered.toUpperCase();
+        }).join(' ');
+        if (line) console.log(line);
+        // TODO: sendJSON [after transforms, etc.]
     } else {
       sendJSON({str:field.value});
     }
     field.value = null;
   }, false);
 });
+
+
+document.querySelector('.file input').addEventListener('change', function (evt) {
+  var file = evt.target.files[0],
+      fapi = new FileReader();
+  fapi.readAsText(file);
+  fapi.onloadend = function () {
+    evt.target.value = null;
+    if (fapi.error) throw fapi.error;
+    
+    var lines = fapi.result.split('\n'),
+        state = initialState();
+    lines.forEach(function (line) {
+      if (!line || line[0] === '%') return;
+      var cmds = renderedCommands(line, state);
+      advanceMachineState(cmds, state);
+    });
+    window.dbgPoints = state.points;
+    console.log("`window.dbgPoints` set!");
+    
+    document.querySelector('polyline').setAttribute('points', state.points.map(function (point) {
+      return [point.x, point.y].join(',');
+    }).join(' '));
+    document.querySelector('polyline').setAttribute('transform', "translate(500 500) scale(100 100)")
+  };
+  
+}, false);
+
+
 </script>
 
 </body></html>
