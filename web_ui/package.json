@@ -1,0 +1,11 @@
+{
+  "name": "js-cnc-web",
+  "version": "0.8.0",
+  "description": "Web UI for js-cnc project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nathan Vander Wilt",
+  "license": "ISC"
+}

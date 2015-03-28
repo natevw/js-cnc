@@ -1,36 +1,10 @@
-var serialport = require('serialport'),
-    Grbl = require("./grbl");
-
-// TODO: https://github.com/grbl/grbl/wiki/Interfacing-with-Grbl
-
-var cnc;
-new serialport.SerialPort("/dev/tty.usbmodem621", {
-  baudrate: 115200,
-  parser: serialport.parsers.readline("\r\n")
-}).on('open', function () {
-  var port = this;
-  console.log("opened");
-  cnc = new Grbl(port);
-  cnc.on('ready', function () {
-//    setInterval(function () {
-//      cnc.write("G91 G1 F1 X1", function (e) {
-//        console.log("EXCHANGED", e);
-//      });
-//    }, 5e3);
-//    setInterval(function () {
-//      cnc.request('status');
-//    }, 1e3);
-  }).on('error', function (e) {
-    if (e instanceof SyntaxError) console.warn(e.stack);
-    else throw e;
-  });
-}).on('error', function (e) {
-  throw e;
-});
+// TODO: in the near term, this would be responsible for hosting web_ui to browers, providing storage and connections between ui/engine/driver
 
 
-var WebSocket = require('faye-websocket'),
-    http      = require('http');
+
+
+var http = require('http'),
+    WebSocket = require('faye-websocket');
 http.createServer(function (req, res) {
   // TODO: host static files
 }).on('upgrade', function (req, sock, body) {

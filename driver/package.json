@@ -1,0 +1,14 @@
+{
+  "name": "js-cnc-driver",
+  "version": "0.9.0",
+  "description": "node-serialport driver for js-cnc project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nathan Vander Wilt",
+  "license": "ISC",
+  "dependencies": {
+    "serialport": "^1.5.0"
+  }
+}

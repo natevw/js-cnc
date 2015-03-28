@@ -1,0 +1,14 @@
+{
+  "name": "js-cnc-engine",
+  "version": "0.5.0",
+  "description": "Business logic for js-cnc project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nathan Vander Wilt",
+  "license": "ISC",
+  "devDependencies": {
+    "pegjs": "^0.8.0"
+  }
+}

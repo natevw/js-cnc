@@ -1,6 +1,8 @@
 var util = require('util'),
     stream = require('stream');
 
+// see: https://github.com/grbl/grbl/wiki/Interfacing-with-Grbl
+
 var ERR = 'error: ',
     VER = 'Grbl ',
     XXX = 'ALARM: ';
@@ -25,6 +27,7 @@ function Grbl(port) {
 if (line[0] !== '<') console.log("RESPONSE:", line);
     if (!line) return;
     else if (line === 'ok') self.emit('ack', null);
+else if (line === "Connected.") self.emit('ready', 'printrbot hack');
     else if (line.indexOf(ERR) === 0) self.emit('ack', new SyntaxError(line.slice(ERR.length) || "[no message provided]"));
     else if (line.indexOf(VER) === 0) self.emit('ready', line.slice(VER.length).split(' ')[0]);
     else if (line.indexOf(XXX) === 0) self.emit('error', new Error(line.slice(XXX.length)));

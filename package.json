@@ -24,11 +24,13 @@
   },
   "homepage": "https://github.com/natevw/js-cnc",
   "dependencies": {
+    "js-cnc-web": "file:web_ui",
+    "js-cnc-engine": "file:engine",
+    "js-cnc-driver": "file:driver",
+    
     "faye-websocket": "^0.9.2",
-    "serialport": "^1.5.0"
   },
   "devDependencies": {
-    "pegjs": "^0.8.0",
     "supervisor": "^0.6.0"
   }
 }
