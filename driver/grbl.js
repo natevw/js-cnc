@@ -39,6 +39,9 @@ else if (line === "Connected.") self.emit('ready', 'printrbot hack');
 };
 util.inherits(Grbl, stream.Writable);
 
+Grbl.portOptions = {};
+
+
 Grbl.prototype._write = function (line, _, cb) {
   var self = this;
 console.log("WRITING:", line);
