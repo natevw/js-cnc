@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "supervisor index",
-    "prepublish": "make parsers"
+    "start": "supervisor index"
   },
   "repository": {
     "type": "git",
@@ -27,8 +26,7 @@
     "js-cnc-web": "file:web_ui",
     "js-cnc-engine": "file:engine",
     "js-cnc-driver": "file:driver",
-    
-    "faye-websocket": "^0.9.2",
+    "faye-websocket": "^0.9.2"
   },
   "devDependencies": {
     "supervisor": "^0.6.0"
