@@ -58,7 +58,7 @@ http.createServer(function (req, res) {
     ws.on('close', function (evt) {
       console.log("ws closed", evt.code, evt.reason);
     });
-  }
+  } else textResponse(400, "WebSocket only.");
 }).listen(8000, function () {
   console.log("listening on port", this.address().port);
 });
