@@ -15,38 +15,23 @@ driver.on('lost', function (d) {
   delete drivers[d.key];
 });
 
-function basicHTML(res, status,title,bodyLines) {
-  res.writeHead(status, {'Content-Type':"text/html"});
-  res.end([
-    "<!doctype html>",
-    "<html><head>",
-    "  <meta charset=\"utf-8\">",
-    "  <title>"+title+"</title>",
-    "</head><body>",
-    (typeof bodyLines === 'string') ? bodyLines : bodyLines.join('\n'),
-    "</body></html>"
-  ].join('\n'));
+function textResponse(res, code, str) {
+    res.writeHead(code, {'content-type':"text/plain; charset=utf-8"});
+    res.end(str);
 }
 
 
-
 var http = require('http'),
+    static = require('serve-static')('web_ui/build'),
     WebSocket = require('faye-websocket');
 http.createServer(function (req, res) {
   var url = require('url').parse(req.url, true),
       path = url.pathname.split('/');
-  if (path[1] === 'static') /* TODO: host files */;
-  else if (path[1] === '') basicHTML(res, 200, "Devices", Object.keys(drivers).map(function (key) {
-    var driver = drivers[key];
-    return "<a href=\"/"+driver.key+"\">"+driver.path+"</a>";
-  }));
-  else if (path[1] in drivers) {
-    // TODO: this really belongs in WebSocket path…actual UI is probably static?
-    var driver = drivers[path[1]];
-    if (driver.claimed) basicHTML(res, 403, "busy", "Device in use.");
-    else basicHTML(res, 200, "yes", "YOUR DEVICE.");
-  }
-  else basicHTML(res, 404, "nope", "Not found.");
+  if (req.url.indexOf('/api/') === 0) textResponse(res, 426, "Not HTTP…");
+  else static(req, res, function (e) {
+    if (e) textResponse(res, 500, e.stack);
+    else textResponse(res, 404, "Not found.");
+  });
 }).on('upgrade', function (req, sock, body) {
   if (WebSocket.isWebSocket(req)) {
     var ws = new WebSocket(req, sock, body);
@@ -54,6 +39,7 @@ http.createServer(function (req, res) {
       ws.send(JSON.stringify(d));
     }
     console.log("ws opened");
+    /*
     ws.on('message', function (evt) {
       //console.log("ws data:", evt.data);
       var d = JSON.parse(evt.data);
@@ -67,6 +53,7 @@ http.createServer(function (req, res) {
     cnc.on('status', function (arr) {
       sendJSON({status:arr});
     });
+    */
     
     ws.on('close', function (evt) {
       console.log("ws closed", evt.code, evt.reason);
